@@ -1,5 +1,4 @@
-#include <iostream>
+#include <sys/socket.h>
 int main() {
-    std::cout << "hello world" << std::endl;
     return 0;
 }
