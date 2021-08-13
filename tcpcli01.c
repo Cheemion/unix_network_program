@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     int sockfd;
     struct sockaddr_in servaddr;
     if(argc != 2) 
-        err_sys("usage: tcpcli <IPaddress>");
+    //    err_sys("usage: tcpcli <IPaddress>");
     sockfd = Socket(AF_INET, SOCK_STREAM, 0);
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
