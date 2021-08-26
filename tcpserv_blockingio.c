@@ -3,6 +3,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include "lib/wrap.h"
 #include <errno.h>
 #define	LISTENQ		1024	/* 2nd argument to listen() */
@@ -21,6 +22,15 @@ void str_echo(int sockfd) {
             err_sys("str_echo:read error");
 };
 
+void sig_chld(int signo) {
+    pid_t pid;
+    int stat;
+    while((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
+        printf("child %d terminated \n", pid);
+    }
+    return;
+}
+
 int main(int argc, char** argv) {
     int listenfd, connfd;
     pid_t childpid;
@@ -34,14 +44,18 @@ int main(int argc, char** argv) {
     servaddr.sin_port = htons(SERV_PORT);
     Bind(listenfd, (struct sockaddr* ) &servaddr, sizeof(servaddr));
     Listen(listenfd, LISTENQ);
-
+    Signal(SIGCHLD, sig_chld);
     for(;;) {
        clilen = sizeof(cliaddr);
-       connfd = Accept(listenfd, (struct sockaddr*)&cliaddr, &clilen);
+       if((connfd = accept(listenfd, (struct sockaddr*)&cliaddr, &clilen)) < 0) {
+            if(errno == EINTR)
+                continue;
+            else
+                err_sys("accept error");
+       }
        if((childpid = Fork()) == 0) { // equal to 0 means child process
            Close(listenfd);
            str_echo(connfd);
-           Close(connfd);
            exit(0);
        }
        close(connfd);

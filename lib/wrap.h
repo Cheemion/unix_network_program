@@ -1,12 +1,18 @@
 #pragma once
+#define _DEFAULT_SOURCE
+#include <features.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <errno.h>
+#include <errno.h> 
 #include <netinet/in.h>
 #include <stdio.h>
-#include<arpa/inet.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #define	MAXLINE		4096	/* max text line length */
+#define INFTIM          (-1)    /* infinite poll timeout */
 void err_sys(char* chars) {
     printf("%s\n", chars);
     fflush(stdout);
@@ -133,7 +139,7 @@ static ssize_t my_read(int fd, char* ptr) {
 ssize_t readline(int fd, void *vptr, size_t maxlen) {
 	ssize_t	n, rc;
 	char	c, *ptr;
-	ptr = vptr;
+	ptr = (char*)vptr;
 	for (n = 1; n < maxlen; n++) {
 		if ( (rc = my_read(fd, &c)) == 1) {
 			*ptr++ = c;
@@ -159,3 +165,77 @@ void Fputs(const char *ptr, FILE *stream) {
 	if (fputs(ptr, stream) == EOF)
 		err_sys("fputs error");
 }
+
+
+int Select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+	int	n;
+	if ( (n = select(nfds, readfds, writefds, exceptfds, timeout)) < 0)
+		err_sys("select error");
+	return(n);		/* can return 0 on timeout */
+}
+
+
+
+typedef	void	Sigfunc(int);	/* for signal handlers */
+
+Sigfunc * signal(int signo, Sigfunc *func) {
+	struct sigaction	act, oact;
+
+	act.sa_handler = func;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	if (signo == SIGALRM) {
+#ifdef	SA_INTERRUPT
+		act.sa_flags |= SA_INTERRUPT;	/* SunOS 4.x */ // 
+#endif
+	} else {
+#ifdef	SA_RESTART
+		act.sa_flags |= SA_RESTART;		/* SVR4, 44BSD */
+#endif
+	}
+	if (sigaction(signo, &act, &oact) < 0)
+		return(SIG_ERR);
+	return(oact.sa_handler);
+}
+/* end signal */
+
+Sigfunc* Signal(int signo, Sigfunc *func)	/* for our signal() function */ {
+	Sigfunc	*sigfunc;
+
+	if ( (sigfunc = signal(signo, func)) == SIG_ERR)
+		err_sys("signal error");
+	return(sigfunc);
+}
+
+
+ssize_t Read(int fd, void *ptr, size_t nbytes) {
+	ssize_t		n;
+	if ( (n = read(fd, ptr, nbytes)) == -1)
+		err_sys("read error");
+	return(n);
+}
+
+void Write(int fd, void *ptr, size_t nbytes)
+{
+	if (write(fd, ptr, nbytes) != nbytes)
+		err_sys("write error");
+}
+void Shutdown(int fd, int how)
+{
+	if (shutdown(fd, how) < 0)
+		err_sys("shutdown error");
+}
+
+int Poll(struct pollfd *fdarray, unsigned long nfds, int timeout) {
+	int		n;
+
+	if ( (n = poll(fdarray, nfds, timeout)) < 0)
+		err_sys("poll error");
+
+	return(n);
+}
+
+
+
+#define	min(a,b)	((a) < (b) ? (a) : (b))
+#define	max(a,b)	((a) > (b) ? (a) : (b))

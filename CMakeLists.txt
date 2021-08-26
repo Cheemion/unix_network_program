@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(NETWORK_PROGRAMMING)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include_directories(./include)
 link_directories(./lib)
 add_executable(main main.cpp)
-add_executable(tcpcli tcpcli01.c)
-add_executable(tcpserv tcpserv01.c)
+add_executable(tcpcli tcpcli_select.c)
+add_executable(tcpserv tcpserv_select.c)
