@@ -11,8 +11,11 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#define	MAXLINE		4096	/* max text line length */
 #define INFTIM          (-1)    /* infinite poll timeout */
+#define	LISTENQ		1024	/* 2nd argument to listen() */
+#define	SERV_PORT	9877			/* TCP and UDP */
+#define	MAXLINE		4096	/* max text line length */
+#define	SA	struct sockaddr
 void err_sys(char* chars) {
     printf("%s\n", chars);
     fflush(stdout);
@@ -98,13 +101,18 @@ void Connect(int sockfd, struct sockaddr* address, socklen_t address_len) {
         err_sys("connect error");
     }
 }
+void
+Inet_pton(int family, const char *strptr, void *addrptr)
+{
+	int		n;
 
-void Inet_pton(int family, char* presentation, void* buf) {
-    if(inet_pton(AF_INET, presentation, buf) <= -1) {
-        err_sys("inet_pton errorr");
-    }
+	if ( (n = inet_pton(family, strptr, addrptr)) < 0)
+		err_sys("inet_pton error for");	/* errno set */
+	else if (n == 0)
+		err_quit("inet_pton error for");	/* errno not set */
+
+	/* nothing to return */
 }
-
 
 
 
@@ -239,3 +247,58 @@ int Poll(struct pollfd *fdarray, unsigned long nfds, int timeout) {
 
 #define	min(a,b)	((a) < (b) ? (a) : (b))
 #define	max(a,b)	((a) > (b) ? (a) : (b))
+
+ssize_t
+Recvfrom(int fd, void *ptr, size_t nbytes, int flags,
+		 struct sockaddr *sa, socklen_t *salenptr)
+{
+	ssize_t		n;
+
+	if ( (n = recvfrom(fd, ptr, nbytes, flags, sa, salenptr)) < 0)
+		err_sys("recvfrom error");
+	return(n);
+}
+
+void
+Sendto(int fd, const void *ptr, size_t nbytes, int flags,
+	   const struct sockaddr *sa, socklen_t salen)
+{
+	if (sendto(fd, ptr, nbytes, flags, sa, salen) != (ssize_t)nbytes)
+		err_sys("sendto error");
+}
+void *
+Malloc(size_t size)
+{
+	void	*ptr;
+
+	if ( (ptr = malloc(size)) == NULL)
+		err_sys("malloc error");
+	return(ptr);
+}
+
+char *
+Sock_ntop(const struct sockaddr *sa, socklen_t salen)
+{
+	char	*ptr;
+
+	if ( (ptr = sock_ntop(sa, salen)) == NULL)
+		err_sys("sock_ntop error");	/* inet_ntop() sets errno */
+	return(ptr);
+}
+void
+Setsockopt(int fd, int level, int optname, const void *optval, socklen_t optlen)
+{
+	if (setsockopt(fd, level, optname, optval, optlen) < 0)
+		err_sys("setsockopt error");
+}
+
+void
+sig_chld(int signo)
+{
+	pid_t	pid;
+	int		stat;
+
+	while ( (pid = waitpid(-1, &stat, WNOHANG)) > 0)
+		printf("child %d terminated\n", pid);
+	return;
+}
