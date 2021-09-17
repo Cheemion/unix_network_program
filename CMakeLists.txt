@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 project(NETWORK_PROGRAMMING)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
+ADD_COMPILE_OPTIONS(-lrt)
 include_directories(./include)
 link_directories(./lib)
 add_executable(main main.cpp)
 add_executable(tcpcli tcpcli_select.c)
 add_executable(tcpserv tcpserv_select.c)
+add_executable(hostent hostent.c)
+add_executable(daytimetcpcli daytimetcpcli.c)
+add_executable(unixbind ./unixdomain/unixbind.c)
+add_executable(mainfifo ./inter_process/mainfifo.c)
+add_executable(mqcreate1 ./mq_related/mqcreate1.c)
+
